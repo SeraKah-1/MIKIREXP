@@ -18,17 +18,30 @@ export default async function handler(req: any, res: any) {
     const isVertexAIEnabled = process.env.VITE_USE_VERTEX_AI === 'true';
     let ai: GoogleGenAI;
 
-    if (isVertexAIEnabled && process.env.VITE_GCP_PROJECT_ID) {
-      const project = process.env.VITE_GCP_PROJECT_ID;
-      const location = process.env.VITE_GCP_LOCATION || 'us-central1';
-      
-      console.log("[Backend] Initializing Vertex AI client...");
-
-      ai = new GoogleGenAI({
-        vertexai: true,
-        project,
-        location
-      });
+    if (isVertexAIEnabled) {
+      if (process.env.VITE_VERTEX_API_KEY) {
+        console.log("[Backend] Initializing Vertex AI client (Express Mode)...");
+        ai = new GoogleGenAI({
+          vertexai: true,
+          apiKey: process.env.VITE_VERTEX_API_KEY
+        });
+      } else if (process.env.VITE_GCP_PROJECT_ID) {
+        const project = process.env.VITE_GCP_PROJECT_ID;
+        
+        // Force 'global' location for Gemini 3 Preview model
+        const isGemini3 = payload.modelName === 'gemini-3-flash-preview';
+        const location = isGemini3 ? 'global' : (process.env.VITE_GCP_LOCATION || 'us-central1');
+        
+        console.log(`[Backend] Initializing Vertex AI client in Standard Mode (${location})...`);
+  
+        ai = new GoogleGenAI({
+          vertexai: true,
+          project,
+          location
+        });
+      } else {
+        return res.status(401).json({ error: 'Proyek ID atau API Key Vertex AI belum diatur' });
+      }
     } else {
       // Fallback Google AI Studio
       const apiKey = payload.apiKey || process.env.GEMINI_API_KEY;
@@ -43,16 +56,18 @@ export default async function handler(req: any, res: any) {
 
     if (action === 'summarize') {
       const { modelName, parts } = payload;
+      const model = modelName === 'gemini-3-flash-preview' ? modelName : ((modelName && modelName.includes('gemini-3')) ? 'gemini-2.0-flash' : (modelName || 'gemini-1.5-flash'));
       const response = await ai.models.generateContent({
-        model: modelName || 'gemini-3-flash-preview',
+        model: model,
         contents: { parts }
       });
       result = response.text;
 
     } else if (action === 'generateQuizBatch') {
       const { modelName, parts, responseSchema, temperature } = payload;
+      const model = modelName === 'gemini-3-flash-preview' ? modelName : ((modelName && modelName.includes('gemini-3')) ? 'gemini-2.0-flash' : (modelName || 'gemini-1.5-flash'));
       const response = await ai.models.generateContent({
-        model: modelName || 'gemini-3-flash-preview',
+        model: model,
         contents: { parts },
         config: {
           responseMimeType: "application/json",
@@ -64,8 +79,9 @@ export default async function handler(req: any, res: any) {
 
     } else if (action === 'chat') {
       const { modelName, parts, systemInstruction, temperature } = payload;
+      const model = modelName === 'gemini-3-flash-preview' ? modelName : ((modelName && modelName.includes('gemini-3')) ? 'gemini-2.0-flash' : (modelName || 'gemini-1.5-flash'));
       const response = await ai.models.generateContent({
-        model: modelName || 'gemini-3-flash-preview',
+        model: model,
         contents: { parts },
         config: {
           systemInstruction,
