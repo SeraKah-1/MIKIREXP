@@ -40,6 +40,11 @@ async function callAI(action: string, payload: any): Promise<any> {
   } else {
     // BACKEND MODE: Browser to Server (Vercel or Cloud Run)
     const backendUrl = import.meta.env.VITE_AI_BACKEND_URL || '/api/genai';
+    
+    if (isVertexAIEnabled() && !import.meta.env.VITE_AI_BACKEND_URL) {
+      console.warn('[Hybrid] Vertex AI enabled but VITE_AI_BACKEND_URL is not set. Falling back to /api/genai (Vercel). Set VITE_AI_BACKEND_URL for Cloud Run support.');
+    }
+    
     console.log(`[Hybrid] Routing ${action} to Backend (${backendUrl})...`);
     
     const response = await fetch(backendUrl, {
@@ -47,6 +52,12 @@ async function callAI(action: string, payload: any): Promise<any> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, payload })
     });
+    
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      throw new Error(errData.error || `Backend error: ${response.status}`);
+    }
+    
     return await response.json();
   }
 }
@@ -67,8 +78,8 @@ const DEFAULT_GENERATION_MODEL = 'gemini-3-flash-preview';
 
 const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } } | { text: string }> => {
   // SAFETY: Limit individual file size to 20MB to prevent browser crash and API limits
-  if (file.size > 20 * 1024 * 1024) {
-    throw new Error(`File ${file.name} terlalu besar (>20MB). Harap gunakan file yang lebih kecil.`);
+  if (file.size > 50 * 1024 * 1024) {
+    throw new Error(`File ${file.name} terlalu besar (>50MB). Harap gunakan file yang lebih kecil.`);
   }
 
   return new Promise((resolve, reject) => {

@@ -90,8 +90,8 @@ const App: React.FC = () => {
     // SAFETY CHECK: File Size
     if (files) {
        const totalSize = Array.from(files).reduce((acc, f) => acc + f.size, 0);
-       if (totalSize > 15 * 1024 * 1024) { // 15MB limit
-          alert("Total ukuran file terlalu besar (>15MB). Harap kurangi jumlah atau ukuran file agar tidak crash.");
+       if (totalSize > 50 * 1024 * 1024) { // 50MB hard limit
+          alert("Total ukuran file terlalu besar (>50MB). Harap kurangi jumlah atau ukuran file.");
           return;
        }
     }
