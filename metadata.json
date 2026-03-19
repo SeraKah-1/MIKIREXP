@@ -1,0 +1,7 @@
+{
+  "name": "MIKIRPIVOTFINALE",
+  "description": "Tempat bikin soal dadakan. Upload materi, langsung jadi kuis. Gak pake ribet.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

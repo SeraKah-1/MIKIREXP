@@ -1,0 +1,459 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents a user in the system.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier of the user (from Firebase Auth)."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the user."
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL of the user's profile picture."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user was created."
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user last logged in."
+        },
+        "config": {
+          "$ref": "#/entities/UserConfig",
+          "description": "User-specific configuration and settings."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "UserConfig": {
+      "title": "UserConfig",
+      "description": "Stores user-specific settings and API keys.",
+      "type": "object",
+      "properties": {
+        "geminiApiKey": {
+          "type": "string",
+          "description": "The user's Gemini API key."
+        },
+        "gestureEnabled": {
+          "type": "boolean",
+          "description": "Whether gesture control is enabled."
+        },
+        "eyeTrackingEnabled": {
+          "type": "boolean",
+          "description": "Whether eye tracking is enabled."
+        },
+        "srsEnabled": {
+          "type": "boolean",
+          "description": "Whether SRS is enabled."
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["default", "matcha", "lilac", "blush", "sky", "vanilla", "sunset", "midnight", "oled", "paper"],
+          "description": "The user's preferred theme."
+        },
+        "storageProvider": {
+          "type": "string",
+          "enum": ["local", "firebase"],
+          "description": "The user's preferred storage provider."
+        }
+      }
+    },
+    "LibraryItem": {
+      "title": "LibraryItem",
+      "description": "Represents a document or note in the user's library.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the library item."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who owns this item."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the item."
+        },
+        "content": {
+          "type": "string",
+          "description": "The raw content of the item."
+        },
+        "processedContent": {
+          "type": "string",
+          "description": "The AI-processed/summarized content."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["pdf", "text", "note"],
+          "description": "The type of the item."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tags associated with the item."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the item was created."
+        }
+      },
+      "required": ["id", "userId", "title", "content", "type", "created_at"]
+    },
+    "SRSItem": {
+      "title": "SRSItem",
+      "description": "Represents an item in the Spaced Repetition System.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the SRS item."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who owns this item."
+        },
+        "content": {
+          "type": "object",
+          "description": "The question/content being reviewed."
+        },
+        "interval": {
+          "type": "number",
+          "description": "The current interval in days."
+        },
+        "repetition": {
+          "type": "number",
+          "description": "The number of successful repetitions."
+        },
+        "efactor": {
+          "type": "number",
+          "description": "The easiness factor."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The next review date."
+        },
+        "lastReviewed": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last review date."
+        }
+      },
+      "required": ["id", "userId", "content", "interval", "repetition", "efactor", "dueDate"]
+    },
+    "GraveyardItem": {
+      "title": "GraveyardItem",
+      "description": "Represents a question the user got wrong.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the graveyard item."
+        },
+        "text": {
+          "type": "string",
+          "description": "The question text."
+        },
+        "correctAnswer": {
+          "type": "string",
+          "description": "The correct answer."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "The explanation."
+        },
+        "buriedAt": {
+          "type": "number",
+          "description": "Timestamp when it was added to graveyard."
+        }
+      },
+      "required": ["id", "text", "correctAnswer", "buriedAt"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "Represents a quiz created by a user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the quiz."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "The UID of the user who created the quiz."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the quiz."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the quiz."
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/Question"
+          },
+          "description": "The list of questions in the quiz."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Whether the quiz is public or private."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the quiz was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the quiz was last updated."
+        }
+      },
+      "required": ["id", "authorId", "title", "questions", "isPublic", "createdAt", "updatedAt"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Represents a single question in a quiz.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the question."
+        },
+        "text": {
+          "type": "string",
+          "description": "The text of the question."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["MULTIPLE_CHOICE", "TRUE_FALSE", "FILL_BLANK"],
+          "description": "The type of the question."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The options for the question (if applicable)."
+        },
+        "correctAnswer": {
+          "type": "string",
+          "description": "The correct answer to the question."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "An explanation of the correct answer."
+        }
+      },
+      "required": ["id", "text", "type", "correctAnswer"]
+    },
+    "QuizResult": {
+      "title": "QuizResult",
+      "description": "Represents the result of a user taking a quiz.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the result."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who took the quiz."
+        },
+        "quizId": {
+          "type": "string",
+          "description": "The ID of the quiz."
+        },
+        "score": {
+          "type": "number",
+          "description": "The score achieved by the user."
+        },
+        "totalQuestions": {
+          "type": "number",
+          "description": "The total number of questions in the quiz."
+        },
+        "correctAnswers": {
+          "type": "number",
+          "description": "The number of correct answers."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the quiz was completed."
+        }
+      },
+      "required": ["id", "userId", "quizId", "score", "totalQuestions", "correctAnswers", "completedAt"]
+    },
+    "MultiplayerRoom": {
+      "title": "MultiplayerRoom",
+      "description": "Represents a multiplayer game room.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the room."
+        },
+        "hostId": {
+          "type": "string",
+          "description": "The UID of the user who created the room."
+        },
+        "quizId": {
+          "type": "string",
+          "description": "The ID of the quiz being played."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["WAITING", "PLAYING", "FINISHED"],
+          "description": "The current status of the room."
+        },
+        "currentQuestionIndex": {
+          "type": "number",
+          "description": "The index of the current question being played."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the room was created."
+        }
+      },
+      "required": ["id", "hostId", "quizId", "status", "currentQuestionIndex", "createdAt"]
+    },
+    "MultiplayerPlayer": {
+      "title": "MultiplayerPlayer",
+      "description": "Represents a player in a multiplayer room.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the player."
+        },
+        "roomId": {
+          "type": "string",
+          "description": "The ID of the room the player is in."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user (if authenticated)."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the player."
+        },
+        "score": {
+          "type": "number",
+          "description": "The current score of the player."
+        },
+        "isOnline": {
+          "type": "boolean",
+          "description": "Whether the player is currently online."
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the player joined the room."
+        }
+      },
+      "required": ["id", "roomId", "displayName", "score", "isOnline", "joinedAt"]
+    },
+    "Challenge": {
+      "title": "Challenge",
+      "description": "Represents a 1v1 or shared challenge.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the challenge."
+        },
+        "creatorName": {
+          "type": "string",
+          "description": "The name of the creator."
+        },
+        "topic": {
+          "type": "string",
+          "description": "The topic of the challenge."
+        },
+        "questions": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Question" },
+          "description": "The list of questions in the challenge."
+        },
+        "creatorScore": {
+          "type": "number",
+          "description": "The score achieved by the creator."
+        },
+        "challengerName": {
+          "type": "string",
+          "description": "The name of the challenger."
+        },
+        "challengerScore": {
+          "type": "number",
+          "description": "The score achieved by the challenger."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the challenge was created."
+        }
+      },
+      "required": ["id", "creatorName", "topic", "questions", "creatorScore", "created_at"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "#/entities/User",
+      "description": "Stores user profiles."
+    },
+    "users/{userId}/library/{itemId}": {
+      "schema": "#/entities/LibraryItem",
+      "description": "Stores user's library items."
+    },
+    "users/{userId}/srs/{srsId}": {
+      "schema": "#/entities/SRSItem",
+      "description": "Stores user's SRS items."
+    },
+    "users/{userId}/graveyard/{itemId}": {
+      "schema": "#/entities/GraveyardItem",
+      "description": "Stores user's wrong questions."
+    },
+    "quizzes/{quizId}": {
+      "schema": "#/entities/Quiz",
+      "description": "Stores quizzes created by users."
+    },
+    "results/{resultId}": {
+      "schema": "#/entities/QuizResult",
+      "description": "Stores quiz results for users."
+    },
+    "rooms/{roomId}": {
+      "schema": "#/entities/MultiplayerRoom",
+      "description": "Stores active multiplayer rooms."
+    },
+    "rooms/{roomId}/players/{playerId}": {
+      "schema": "#/entities/MultiplayerPlayer",
+      "description": "Stores players within a multiplayer room."
+    },
+    "challenges/{challengeId}": {
+      "schema": "#/entities/Challenge",
+      "description": "Stores 1v1 challenges."
+    }
+  }
+}
