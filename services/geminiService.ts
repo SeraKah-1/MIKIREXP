@@ -20,8 +20,25 @@ export function getActiveProvider(): 'gemini' | 'vertexai' {
 async function callAI(action: string, payload: any): Promise<any> {
   const { apiKey, modelName, parts, systemInstruction, responseSchema, temperature } = payload;
 
-  if (!isVertexAIEnabled() && apiKey) {
-    // DIRECT MODE: Browser to Google (Bypass Vercel 4.5MB Limit)
+  const cloudRunUrl = import.meta.env.VITE_AI_BACKEND_URL;
+
+  // PRIORITY 1: If Cloud Run backend URL is explicitly set, always use it (supports large files + Vertex AI)
+  if (cloudRunUrl) {
+    console.log(`[Hybrid] Routing ${action} to Cloud Run Backend (${cloudRunUrl})...`);
+    const response = await fetch(cloudRunUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload })
+    });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      throw new Error(errData.error || `Backend error: ${response.status}`);
+    }
+    return await response.json();
+  }
+
+  // PRIORITY 2: If API key is available, call Google directly from browser (works for ALL Gemini models)
+  if (apiKey) {
     console.log(`[Hybrid] Routing ${action} directly to Google via Browser SDK...`);
     const ai = new GoogleGenAI({ apiKey });
     
@@ -37,29 +54,20 @@ async function callAI(action: string, payload: any): Promise<any> {
     });
 
     return { result: response.text };
-  } else {
-    // BACKEND MODE: Browser to Server (Vercel or Cloud Run)
-    const backendUrl = import.meta.env.VITE_AI_BACKEND_URL || '/api/genai';
-    
-    if (isVertexAIEnabled() && !import.meta.env.VITE_AI_BACKEND_URL) {
-      console.warn('[Hybrid] Vertex AI enabled but VITE_AI_BACKEND_URL is not set. Falling back to /api/genai (Vercel). Set VITE_AI_BACKEND_URL for Cloud Run support.');
-    }
-    
-    console.log(`[Hybrid] Routing ${action} to Backend (${backendUrl})...`);
-    
-    const response = await fetch(backendUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, payload })
-    });
-    
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-      throw new Error(errData.error || `Backend error: ${response.status}`);
-    }
-    
-    return await response.json();
   }
+
+  // PRIORITY 3: Last resort — try Vercel backend (only works when deployed on Vercel)
+  console.log(`[Hybrid] No API key or Cloud Run URL. Trying Vercel backend /api/genai...`);
+  const response = await fetch('/api/genai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, payload })
+  });
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+    throw new Error(errData.error || `Backend error: ${response.status}`);
+  }
+  return await response.json();
 }
 
 // --- CONFIGURATION ---
