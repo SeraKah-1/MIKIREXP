@@ -21,18 +21,13 @@ export default async function handler(req: any, res: any) {
     if (isVertexAIEnabled && process.env.VITE_GCP_PROJECT_ID) {
       const project = process.env.VITE_GCP_PROJECT_ID;
       const location = process.env.VITE_GCP_LOCATION || 'us-central1';
-      // Gunakan VITE_VERTEX_API_KEY dari env jika ada, fallback ke API_KEY bawaan
-      const vertexKey = process.env.VITE_VERTEX_API_KEY || payload.apiKey;
-
-      if (!vertexKey) {
-        console.warn("Vertex AI configured but no API key found. Trying ADC fallback if deployed on GCP...");
-      }
+      
+      console.log("[Backend] Initializing Vertex AI client...");
 
       ai = new GoogleGenAI({
         vertexai: true,
         project,
-        location,
-        ...(vertexKey && { apiKey: vertexKey })
+        location
       });
     } else {
       // Fallback Google AI Studio

@@ -27,13 +27,11 @@ app.post('/genai', async (req, res) => {
     if (isVertexAIEnabled && process.env.VITE_GCP_PROJECT_ID) {
       const project = process.env.VITE_GCP_PROJECT_ID;
       const location = process.env.VITE_GCP_LOCATION || 'us-central1';
-      const vertexKey = process.env.VITE_VERTEX_API_KEY || payload.apiKey;
 
       ai = new GoogleGenAI({
         vertexai: true,
         project,
-        location,
-        ...(vertexKey && { apiKey: vertexKey })
+        location
       });
     } else {
       const apiKey = payload.apiKey || process.env.GEMINI_API_KEY;
