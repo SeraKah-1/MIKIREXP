@@ -446,7 +446,7 @@ export const generateQuiz = async (
 
       } catch (err: any) {
          console.error(`Batch ${batchIndex} Error (${selectedModel}):`, err.message);
-         return []; 
+         throw err; 
       }
   };
 
