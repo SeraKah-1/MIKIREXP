@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ExperimentalSettingsProvider } from './contexts/ExperimentalSettingsContext';
 import { CameraProvider } from './contexts/CameraContext';
-import { isVertexAIEnabled } from './services/genaiClient';
+import { isVertexAIEnabled } from './services/geminiService';
 
 // --- Startup Provider Banner ---
 console.log(

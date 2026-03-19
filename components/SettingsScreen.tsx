@@ -20,7 +20,7 @@ import { GlassButton } from './GlassButton';
 import { ThemeSelector } from './ThemeSelector';
 import { AiProvider, StorageProvider, ThemeName } from '../types';
 import { AuthWidget } from './AuthWidget';
-import { getActiveProvider, isVertexAIEnabled } from '../services/genaiClient';
+import { isVertexAIEnabled, getActiveProvider } from '../services/geminiService';
 
 export const SettingsScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AiProvider>('gemini');

@@ -5,9 +5,51 @@
  * ==========================================
  */
 
-import { Type, Schema } from "@google/genai";
-import { createGenAIClient, isVertexAIEnabled } from "./genaiClient";
+import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Question, QuizMode, ExamStyle } from "../types";
+
+export function isVertexAIEnabled(): boolean {
+  return import.meta.env.VITE_USE_VERTEX_AI === 'true';
+}
+
+export function getActiveProvider(): 'gemini' | 'vertexai' {
+  return isVertexAIEnabled() ? 'vertexai' : 'gemini';
+}
+
+// Internal helper for Hybrid Branching
+async function callAI(action: string, payload: any): Promise<any> {
+  const { apiKey, modelName, parts, systemInstruction, responseSchema, temperature } = payload;
+
+  if (!isVertexAIEnabled() && apiKey) {
+    // DIRECT MODE: Browser to Google (Bypass Vercel 4.5MB Limit)
+    console.log(`[Hybrid] Routing ${action} directly to Google via Browser SDK...`);
+    const ai = new GoogleGenAI({ apiKey });
+    
+    const response = await ai.models.generateContent({
+      model: modelName || 'gemini-3-flash-preview',
+      contents: { parts },
+      config: {
+        systemInstruction: systemInstruction || undefined,
+        responseMimeType: responseSchema ? "application/json" : "text/plain",
+        responseSchema: responseSchema || undefined,
+        temperature: temperature || 0.7
+      }
+    });
+
+    return { result: response.text };
+  } else {
+    // BACKEND MODE: Browser to Server (Vercel or Cloud Run)
+    const backendUrl = import.meta.env.VITE_AI_BACKEND_URL || '/api/genai';
+    console.log(`[Hybrid] Routing ${action} to Backend (${backendUrl})...`);
+    
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload })
+    });
+    return await response.json();
+  }
+}
 
 // --- CONFIGURATION ---
 
@@ -178,7 +220,6 @@ const sanitizeQuestion = (q: any): Omit<Question, 'id'> => {
 export const summarizeMaterial = async (apiKey: string, content: string | File): Promise<string> => {
   if (!content) return "";
   
-  const ai = createGenAIClient(apiKey);
   const modelName = 'gemini-3-flash-preview'; // Standard Fast Model
   
   const prompt = `
@@ -205,12 +246,15 @@ export const summarizeMaterial = async (apiKey: string, content: string | File):
         parts.push({ text: prompt });
       }
 
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: { parts }
+      const data = await callAI('summarize', {
+        apiKey,
+        modelName,
+        parts
       });
+
+      if (data.error) throw new Error(data.error);
       
-      const result = response.text;
+      const result = data.result;
       if (!result) return typeof content === 'string' ? content.substring(0, 10000) : "Gagal mengekstrak PDF."; // Fallback to raw if empty
       
       return `[SUMMARY]\n${result}`;
@@ -239,7 +283,6 @@ export const generateQuiz = async (
 ): Promise<{ questions: Question[], contextText: string }> => {
   
   if (!apiKey && !isVertexAIEnabled()) throw new Error("API Key Gemini belum diatur.");
-  const ai = createGenAIClient(apiKey);
   
   // --- PREPARE CONTEXT ---
   const baseParts: any[] = [];
@@ -363,17 +406,17 @@ export const generateQuiz = async (
       const parts = [...baseParts, { text: batchPrompt }];
 
       try {
-         const response = await ai.models.generateContent({
-            model: selectedModel,
-            contents: { parts },
-            config: { 
-              responseMimeType: "application/json", 
-              responseSchema: responseSchema, 
-              temperature: 0.5, // Slightly higher temperature for more variety
-            }
+         const data = await callAI('generateQuizBatch', { 
+            apiKey, 
+            modelName: selectedModel, 
+            parts, 
+            responseSchema, 
+            temperature: 0.5 
          });
 
-         const responseText = response.text;
+         if (data.error) throw new Error(data.error);
+
+         const responseText = data.result;
          if (!responseText) throw new Error("Empty Response");
 
          const rawQuestions = cleanAndParseJSON(responseText);
@@ -435,7 +478,6 @@ export const generateQuiz = async (
 
 export const chatWithDocument = async (apiKey: string, modelId: string, history: any[], message: string, contextText: string, file: File | null) => {
   if (!apiKey && !isVertexAIEnabled()) throw new Error("API Key Gemini belum diatur.");
-  const ai = createGenAIClient(apiKey);
 
   const finalParts: any[] = [];
 
@@ -469,16 +511,17 @@ export const chatWithDocument = async (apiKey: string, modelId: string, history:
   finalParts.push({ text: promptText });
 
   try {
-    const response = await ai.models.generateContent({
-      model: modelId || 'gemini-3-flash-preview',
-      contents: { parts: finalParts },
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.3,
-      }
+    const data = await callAI('chat', {
+       apiKey,
+       modelName: modelId || 'gemini-3-flash-preview',
+       parts: finalParts,
+       systemInstruction,
+       temperature: 0.3
     });
 
-    return response.text || "Maaf, saya tidak bisa memberikan jawaban saat ini.";
+    if (data.error) throw new Error(data.error);
+
+    return data.result || "Maaf, saya tidak bisa memberikan jawaban saat ini.";
   } catch (err: any) {
     console.error("Chat Error:", err);
     throw new Error("Gagal memproses pesan. Periksa koneksi atau API Key.");

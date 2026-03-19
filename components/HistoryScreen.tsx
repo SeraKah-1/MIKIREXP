@@ -7,7 +7,7 @@ import {
   getSavedQuizzes, renameQuiz, deleteQuiz,
   updateLocalQuizQuestions,
   processAndSaveToLibrary, getLibraryItems, deleteLibraryItem, updateLibraryItem,
-  getGraveyard, removeFromGraveyard, reprocessLibraryItem,
+  getGraveyard, removeFromGraveyard, reprocessLibraryItem, clearGraveyard,
   uploadQuizToCloud, downloadQuizFromCloud, getCloudQuizzes
 } from '../services/storageService';
 import { EditQuizModal } from './EditQuizModal';
@@ -111,8 +111,9 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
     setLibraryItems(items);
   };
 
-  const refreshGraveyard = () => {
-     setGraveyardItems(getGraveyard());
+  const refreshGraveyard = async () => {
+     const items = await getGraveyard();
+     setGraveyardItems(items);
   };
 
   const handleDownloadQuiz = async (quiz: any) => {
@@ -276,6 +277,21 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
   const handleBanish = (text: string) => {
      removeFromGraveyard(text);
      refreshGraveyard();
+  };
+
+  const handleClearGraveyard = async () => {
+     if (confirm("Kosongkan semua soal di Kuburan? Ini tidak dapat dibatalkan.")) {
+        setIsLoading(true);
+        try {
+           await clearGraveyard();
+           refreshGraveyard();
+           alert("Kuburan berhasil dikosongkan!");
+        } catch (e: any) {
+           alert("Gagal mengosongkan: " + e.message);
+        } finally {
+           setIsLoading(false);
+        }
+     }
   };
 
   const filteredQuizzes = useMemo(() => {
@@ -584,7 +600,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
                                     <Layers size={18} />
                                  </button>
                                  {viewMode === 'local' && (
-                                    <button onClick={(e) => { e.stopPropagation(); handleOpenUploadModal(quiz); }} className="p-2 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg" title="Upload ke Cloud">
+                                    <button onClick={(e) => { e.stopPropagation(); handleOpenUploadModal(quiz); }} className="p-2 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg" title="Bagikan / Ubah Akses">
                                        <CloudUpload size={18} />
                                     </button>
                                  )}
@@ -608,11 +624,17 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
          {/* --- GRAVEYARD VIEW --- */}
          {activeTab === 'graveyard' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="flex justify-between items-center mb-6 border-b border-slate-200/60 pb-4">
+                 <div className="flex justify-between items-center mb-6 border-b border-slate-200/60 pb-4">
                   <div>
                      <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Ghost size={24} className="text-slate-800"/> Kuburan Soal</h1>
                      <p className="text-sm text-slate-500">Tempat soal-soal yang pernah kamu jawab salah.</p>
                   </div>
+                  
+                  {graveyardItems.length > 0 && (
+                     <button onClick={handleClearGraveyard} className="bg-rose-100 text-rose-600 hover:bg-rose-200 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center">
+                        <Trash2 size={16} className="mr-2" /> Kosongkan
+                     </button>
+                  )}
                </div>
 
                {isLoading ? (
@@ -670,8 +692,8 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
         {uploadModal.isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
-              <h3 className="text-xl font-bold text-slate-800 mb-4">Upload ke Cloud</h3>
-              <p className="text-sm text-slate-500 mb-6">Simpan kuis ini di server agar bisa dimainkan Multiplayer atau diakses dari device lain.</p>
+              <h3 className="text-xl font-bold text-slate-800 mb-4">Bagikan Kuis</h3>
+              <p className="text-sm text-slate-500 mb-6">Kuis ini sudah aman di Cloud Pribadi kamu. Atur visibilitas jika ingin membagikan kuis ini ke publik.</p>
               
               <div className="space-y-4 mb-6">
                 <div>
@@ -706,7 +728,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
                 <button onClick={() => setUploadModal({ quiz: null, isOpen: false })} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold hover:bg-slate-200">Batal</button>
                 <button onClick={handleConfirmUpload} disabled={isLoading} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center">
                   {isLoading ? <RefreshCw className="animate-spin mr-2" size={16} /> : <CloudUpload className="mr-2" size={16} />}
-                  Upload
+                  Simpan Pengaturan
                 </button>
               </div>
             </motion.div>

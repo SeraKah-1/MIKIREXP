@@ -212,6 +212,23 @@ export const removeFromGraveyard = async (text: string) => {
   } catch (e) { console.error("Gagal membangkitkan soal", e); }
 };
 
+export const clearGraveyard = async () => {
+  try {
+    localStorage.removeItem(GRAVEYARD_KEY);
+
+    // Cloud Sync Deletion
+    if (auth.currentUser) {
+        const graveyardRef = collection(db, "users", auth.currentUser.uid, "graveyard");
+        const querySnapshot = await getDocs(query(graveyardRef));
+        const deletions = querySnapshot.docs.map(docSnap => deleteDoc(docSnap.ref));
+        await Promise.all(deletions);
+    }
+  } catch (e) { 
+      console.error("Gagal mengosongkan kuburan", e);
+      throw e;
+  }
+};
+
 // --- GLOBAL SYNC ---
 export const syncAllFromCloud = async () => {
     if (!auth.currentUser) return;
@@ -529,9 +546,9 @@ export const saveGeneratedQuiz = async (file: File | null, config: ModelConfig, 
     folder: config.folder,
     authorId: auth.currentUser?.uid || 'local',
     title: fileName,
-    isPublic: config.visibility === 'public',
+    isPublic: config.visibility === 'public' || false,
     visibility: config.visibility || 'private',
-    accessCode: config.accessCode,
+    accessCode: config.accessCode || '',
     userId: auth.currentUser?.uid || 'local'
   };
 
