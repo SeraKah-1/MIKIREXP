@@ -235,6 +235,27 @@ export const NeuroSync = {
       console.error("Failed to update SRS item:", e);
       return null;
     }
+  },
+
+  /**
+   * Clear all SRS data for the user
+   */
+  async clearSyncData(): Promise<boolean> {
+      if (!auth.currentUser) return false;
+      try {
+          const srsRef = collection(db, "users", auth.currentUser.uid, "srs");
+          const querySnapshot = await getDocs(query(srsRef));
+          
+          const batchPromises = querySnapshot.docs.map(docSnapshot => {
+              return deleteDoc(doc(db, "users", auth.currentUser!.uid, "srs", docSnapshot.id));
+          });
+          
+          await Promise.all(batchPromises);
+          return true;
+      } catch (e) {
+          console.error("Failed to clear SRS data:", e);
+          return false;
+      }
   }
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Key, Save, Trash2, ShieldCheck, Zap, Database, HardDrive, Server, Layers, ShieldAlert, Hand, ArrowRight, PlayCircle, Palette } from 'lucide-react';
+import { Key, Save, Trash2, ShieldCheck, Zap, Database, HardDrive, Server, Layers, ShieldAlert, Hand, ArrowRight, PlayCircle, Palette, Cloud } from 'lucide-react';
 import { 
   saveApiKey, 
   getApiKey, 
@@ -20,6 +20,7 @@ import { GlassButton } from './GlassButton';
 import { ThemeSelector } from './ThemeSelector';
 import { AiProvider, StorageProvider, ThemeName } from '../types';
 import { AuthWidget } from './AuthWidget';
+import { getActiveProvider, isVertexAIEnabled } from '../services/genaiClient';
 
 export const SettingsScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AiProvider>('gemini');
@@ -115,6 +116,31 @@ export const SettingsScreen: React.FC = () => {
         {storageTab === 'ai' && (
           <>
             <div className="flex items-center space-x-3 mb-6 select-none"><div className="p-3 bg-theme-primary/10 rounded-xl text-theme-primary"><Key size={24} /></div><div><h2 className="text-2xl font-bold">API Key</h2><p className="text-sm opacity-70">Akses Gemini AI.</p></div></div>
+            
+            {/* Provider Status Badge */}
+            <div className={`mb-6 p-4 rounded-2xl border flex items-center space-x-3 ${
+              isVertexAIEnabled() 
+                ? 'bg-blue-500/10 border-blue-500/30' 
+                : 'bg-emerald-500/10 border-emerald-500/30'
+            }`}>
+              <div className={`p-2 rounded-xl ${
+                isVertexAIEnabled() ? 'bg-blue-500/20 text-blue-500' : 'bg-emerald-500/20 text-emerald-500'
+              }`}>
+                {isVertexAIEnabled() ? <Cloud size={20} /> : <Key size={20} />}
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${
+                  isVertexAIEnabled() ? 'text-blue-600' : 'text-emerald-600'
+                }`}>
+                  {isVertexAIEnabled() ? '☁️ Mode: Vertex AI (Primary)' : '🔑 Mode: Google AI Studio'}
+                </p>
+                <p className="text-xs opacity-60">
+                  {isVertexAIEnabled() 
+                    ? `Project: ${import.meta.env.VITE_GCP_PROJECT_ID || '(belum diset)'} • Region: ${import.meta.env.VITE_GCP_LOCATION || 'us-central1'}` 
+                    : 'Langsung menggunakan API Key tanpa Vertex AI'}
+                </p>
+              </div>
+            </div>
             <div className="space-y-6">
             <div>
                 <div className="flex justify-between items-end mb-2">

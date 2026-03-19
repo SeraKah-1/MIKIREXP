@@ -49,9 +49,12 @@ export const UniversalQuestionCard: React.FC<UniversalCardProps> = ({
   }, [question.id]);
 
   // --- RENDERER: MULTIPLE CHOICE (TACTILE) ---
-  const renderMCQ = () => (
+  const renderMCQ = () => {
+    const options = question.options || []; // Fallback for old/corrupt graveyard data
+    
+    return (
     <div className="grid grid-cols-1 gap-4 w-full">
-      {question.options.map((option, idx) => {
+      {options.map((option, idx) => {
         const isSelected = userAnswer === idx;
         const isCorrect = question.correctIndex === idx;
         
@@ -90,13 +93,13 @@ export const UniversalQuestionCard: React.FC<UniversalCardProps> = ({
             <span className="text-base font-medium leading-relaxed flex-1 py-1">
                 <RenderText text={option} />
             </span>
-            {isAnswered && isCorrect && <Check className="text-emerald-600 shrink-0 mt-1" size={24} strokeWidth={3} />}
             {isAnswered && isSelected && !isCorrect && <X className="text-rose-500 shrink-0 mt-1" size={24} strokeWidth={3} />}
           </button>
         );
       })}
     </div>
   );
+  };
 
   // --- RENDERER: TRUE / FALSE (TACTILE) ---
   const renderTrueFalse = () => (

@@ -5,7 +5,8 @@
  * ==========================================
  */
 
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { Type, Schema } from "@google/genai";
+import { createGenAIClient, isVertexAIEnabled } from "./genaiClient";
 import { Question, QuizMode, ExamStyle } from "../types";
 
 // --- CONFIGURATION ---
@@ -177,7 +178,7 @@ const sanitizeQuestion = (q: any): Omit<Question, 'id'> => {
 export const summarizeMaterial = async (apiKey: string, content: string | File): Promise<string> => {
   if (!content) return "";
   
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGenAIClient(apiKey);
   const modelName = 'gemini-3-flash-preview'; // Standard Fast Model
   
   const prompt = `
@@ -237,8 +238,8 @@ export const generateQuiz = async (
   libraryContext: string = "" 
 ): Promise<{ questions: Question[], contextText: string }> => {
   
-  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  if (!apiKey && !isVertexAIEnabled()) throw new Error("API Key Gemini belum diatur.");
+  const ai = createGenAIClient(apiKey);
   
   // --- PREPARE CONTEXT ---
   const baseParts: any[] = [];
@@ -433,8 +434,8 @@ export const generateQuiz = async (
 };
 
 export const chatWithDocument = async (apiKey: string, modelId: string, history: any[], message: string, contextText: string, file: File | null) => {
-  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  if (!apiKey && !isVertexAIEnabled()) throw new Error("API Key Gemini belum diatur.");
+  const ai = createGenAIClient(apiKey);
 
   const finalParts: any[] = [];
 
