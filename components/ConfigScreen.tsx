@@ -160,8 +160,8 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart, onContinue,
       if (!(f.name.endsWith('.pdf') || f.name.endsWith('.txt') || f.name.endsWith('.md'))) {
         return false;
       }
-      if (f.size > 20 * 1024 * 1024) {
-        alert(`File ${f.name} terlalu besar. Maksimal 20MB.`);
+      if (f.size > 15 * 1024 * 1024) {
+        alert(`File ${f.name} terlalu besar. Maksimal 15MB.`);
         return false;
       }
       return true;

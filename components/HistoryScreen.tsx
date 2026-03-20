@@ -158,10 +158,17 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
     if (!e.target.files || !e.target.files[0]) return;
     const files = Array.from(e.target.files) as File[];
     
-    // SAFETY: Limit total upload size to 20MB
+    // SAFETY: Per-file limit (inline base64 limit ~15MB raw)
+    const oversizedFile = files.find(f => f.size > 15 * 1024 * 1024);
+    if (oversizedFile) {
+       alert(`File ${oversizedFile.name} terlalu besar (>15MB). Harap gunakan file yang lebih kecil.`);
+       return;
+    }
+    
+    // SAFETY: Limit total upload size to 15MB
     const totalSize = files.reduce((acc, f) => acc + f.size, 0);
-    if (totalSize > 20 * 1024 * 1024) {
-       alert("Total ukuran file terlalu besar (>20MB). Harap upload bertahap.");
+    if (totalSize > 15 * 1024 * 1024) {
+       alert("Total ukuran file terlalu besar (>15MB). Harap upload bertahap.");
        return;
     }
 

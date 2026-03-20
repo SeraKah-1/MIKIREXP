@@ -8,56 +8,36 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Question, QuizMode, ExamStyle } from "../types";
 
-export function isVertexAIEnabled(): boolean {
-  return import.meta.env.VITE_USE_VERTEX_AI === 'true';
+export function getActiveProvider(): 'gemini' {
+  return 'gemini';
 }
 
-export function getActiveProvider(): 'gemini' | 'vertexai' {
-  return isVertexAIEnabled() ? 'vertexai' : 'gemini';
-}
-
-// Internal helper for Hybrid Branching
+// Internal helper for AI Call Routing
 async function callAI(action: string, payload: any): Promise<any> {
-  const { apiKey, modelName, parts, systemInstruction, responseSchema, temperature } = payload;
+  const { apiKey, modelName, parts, contents, systemInstruction, responseSchema, temperature, maxOutputTokens } = payload;
 
-  const cloudRunUrl = import.meta.env.VITE_AI_BACKEND_URL;
-
-  // PRIORITY 1: If Cloud Run backend URL is explicitly set, always use it (supports large files + Vertex AI)
-  if (cloudRunUrl) {
-    console.log(`[Hybrid] Routing ${action} to Cloud Run Backend (${cloudRunUrl})...`);
-    const response = await fetch(cloudRunUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, payload })
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-      throw new Error(errData.error || `Backend error: ${response.status}`);
-    }
-    return await response.json();
-  }
-
-  // PRIORITY 2: If API key is available, call Google directly from browser (works for ALL Gemini models)
+  // PRIORITY 1: Browser SDK Direct (Jika User sudah define API key di FE)
   if (apiKey) {
-    console.log(`[Hybrid] Routing ${action} directly to Google via Browser SDK...`);
+    console.log(`[Gemini] Routing ${action} directly to Google via Browser SDK...`);
     const ai = new GoogleGenAI({ apiKey });
     
     const response = await ai.models.generateContent({
-      model: sanitizeModelName(modelName) || 'gemini-1.5-flash',
-      contents: { parts },
+      model: modelName || 'gemini-1.5-flash',
+      contents: contents || [{ role: 'user', parts }],
       config: {
         systemInstruction: systemInstruction || undefined,
         responseMimeType: responseSchema ? "application/json" : "text/plain",
         responseSchema: responseSchema || undefined,
-        temperature: temperature || 0.7
+        temperature: temperature || 0.7,
+        maxOutputTokens: maxOutputTokens || undefined
       }
     });
 
     return { result: response.text };
   }
 
-  // PRIORITY 3: Last resort — try Vercel backend (only works when deployed on Vercel)
-  console.log(`[Hybrid] No API key or Cloud Run URL. Trying Vercel backend /api/genai...`);
+  // PRIORITY 2: Vercel backend as proxy
+  console.log(`[Gemini] No client API key. Routing to Vercel backend /api/genai...`);
   const response = await fetch('/api/genai', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -74,29 +54,19 @@ async function callAI(action: string, payload: any): Promise<any> {
 
 // Prioritas Model untuk Ingestion (Meringkas). 
 const INGESTION_MODELS = [
-  'gemini-3-flash-preview',   // 1. Latest Preview
-  'gemini-1.5-pro',           // 2. High Intelligence
-  'gemini-2.0-flash',         // 3. Ultra Fast & New
-  'gemini-1.5-flash',         // 4. Stable Fast
-  'gemini-2.0-flash-lite-preview-02-05' // 5. Experimental
+  'gemini-3-flash-preview',
+  'gemini-1.5-pro',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
 ];
 
 // Model Cepat untuk "Generation" (Membuat Soal) -> High RPM
 const DEFAULT_GENERATION_MODEL = 'gemini-1.5-flash';
 
-// Helper to sanitize model name for Vertex AI (fixes 404 errors)
-function sanitizeModelName(model: string): string {
-  if (model === 'gemini-3-flash-preview') return model;
-  if (model.includes('gemini-3')) return 'gemini-2.0-flash';
-  if (model.includes('gemini-2.5-flash-lite')) return 'gemini-2.0-flash-lite-preview-02-05';
-  if (model.includes('gemini-2.5')) return 'gemini-1.5-flash';
-  return model;
-}
-
 const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } } | { text: string }> => {
-  // SAFETY: Limit individual file size to 20MB to prevent browser crash and API limits
-  if (file.size > 50 * 1024 * 1024) {
-    throw new Error(`File ${file.name} terlalu besar (>50MB). Harap gunakan file yang lebih kecil.`);
+  // SAFETY: Limit individual file size to 15MB (inline base64 expands ~33%, Google API limit is 20MB encoded)
+  if (file.size > 15 * 1024 * 1024) {
+    throw new Error(`File ${file.name} terlalu besar (>15MB). Harap gunakan file yang lebih kecil.`);
   }
 
   return new Promise((resolve, reject) => {
@@ -310,7 +280,7 @@ export const generateQuiz = async (
   libraryContext: string = "" 
 ): Promise<{ questions: Question[], contextText: string }> => {
   
-  if (!apiKey && !isVertexAIEnabled()) throw new Error("API Key Gemini belum diatur.");
+  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
   
   // --- PREPARE CONTEXT ---
   const baseParts: any[] = [];
@@ -365,8 +335,6 @@ export const generateQuiz = async (
 
   const bloomInstruction = getBloomPrompt(examStyles);
 
-  const modeInstruction = "";
-
   // --- BATCHING STRATEGY (SEQUENTIAL FOR ANTI-REPETITION) ---
   const BATCH_SIZE = 10; 
   const totalBatches = Math.ceil(questionCount / BATCH_SIZE);
@@ -413,7 +381,6 @@ export const generateQuiz = async (
         GOAL: Create ${count} multiple-choice questions for: "${topic || 'Context'}".
         
         ${bloomInstruction}
-        ${modeInstruction}
         USER NOTE: "${customPrompt}"
     
         INSTRUCTIONS:
@@ -436,10 +403,11 @@ export const generateQuiz = async (
       try {
          const data = await callAI('generateQuizBatch', { 
             apiKey, 
-            modelName: sanitizeModelName(selectedModel), 
+            modelName: selectedModel, 
             parts, 
             responseSchema, 
-            temperature: 0.5 
+            temperature: 0.5,
+            maxOutputTokens: 8192
          });
 
          if (data.error) throw new Error(data.error);
@@ -505,7 +473,7 @@ export const generateQuiz = async (
 };
 
 export const chatWithDocument = async (apiKey: string, modelId: string, history: any[], message: string, contextText: string, file: File | null) => {
-  if (!apiKey && !isVertexAIEnabled()) throw new Error("API Key Gemini belum diatur.");
+  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
 
   const finalParts: any[] = [];
 
@@ -517,16 +485,18 @@ export const chatWithDocument = async (apiKey: string, modelId: string, history:
     LANGUAGE RULE: You MUST write your response STRICTLY in Bahasa Indonesia. Do NOT mix with English unless it is a specific technical term.
   `;
 
-  let promptText = `${systemInstruction}\n\n`;
-
+  // Bangun konteks materi sebagai bagian dari pesan user
   if (contextText) {
-    promptText += `CONTEXT MATERIAL:\n${contextText}\n\nEND OF CONTEXT MATERIAL\n\n`;
+    finalParts.push({ text: `CONTEXT MATERIAL:\n${contextText}\n\nEND OF CONTEXT MATERIAL` });
   }
 
   if (file) {
     const filePart = await fileToGenerativePart(file);
     finalParts.push(filePart);
   }
+
+  // Tambahkan pesan user yang sebenarnya
+  finalParts.push({ text: message });
 
   const contents = [...history, { role: 'user', parts: finalParts }];
 

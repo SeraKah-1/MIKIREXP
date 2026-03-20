@@ -15,6 +15,7 @@ async function callVertexExpress(model: string, contents: any, config: any, apiK
       if (config.temperature !== undefined) payload.generationConfig.temperature = config.temperature;
       if (config.responseMimeType) payload.generationConfig.responseMimeType = config.responseMimeType;
       if (config.responseSchema) payload.generationConfig.responseSchema = config.responseSchema;
+      if (config.maxOutputTokens) payload.generationConfig.maxOutputTokens = config.maxOutputTokens;
     }
     if (config.systemInstruction) {
        payload.systemInstruction = { parts: [{ text: config.systemInstruction }] };
@@ -46,11 +47,12 @@ export default async function handler(req: any, res: any) {
   if (!action || !payload) return res.status(400).json({ error: 'Missing action or payload' });
 
   try {
-    const useVertexExpress = process.env.VITE_USE_VERTEX_EXPRESS === 'true';
-    const vertexApiKey = process.env.VITE_VERTEX_API_KEY;
+    const env = process.env as any;
+    const useVertexExpress = env.VITE_USE_VERTEX_EXPRESS === 'true';
+    const vertexApiKey = env.VITE_VERTEX_API_KEY;
     const aiStudioKey = payload.apiKey || process.env.GEMINI_API_KEY;
 
-    let { modelName, contents, parts, responseSchema, temperature, systemInstruction } = payload;
+    let { modelName, contents, parts, responseSchema, temperature, systemInstruction, maxOutputTokens } = payload;
     let model = modelName || 'gemini-1.5-flash';
 
     // Standarisasi form content (Menangani masalah INVALID_ARGUMENT role user/model)
@@ -59,7 +61,7 @@ export default async function handler(req: any, res: any) {
     // Siapkan parameter GenerationConfig yang spesifik dari sistem kita
     let config: any = {};
     if (action === 'generateQuizBatch') {
-       config = { responseMimeType: "application/json", responseSchema, temperature: temperature || 0.5 };
+       config = { responseMimeType: "application/json", responseSchema, temperature: temperature || 0.5, maxOutputTokens: maxOutputTokens || 8192 };
     } else if (action === 'chat') {
        config = { systemInstruction, temperature: temperature || 0.3 };
     }
