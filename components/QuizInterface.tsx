@@ -172,18 +172,19 @@ export const QuizInterface: React.FC<QuizInterfaceProps> = ({ onComplete, onExit
   }, [currentIndex, playClick, isMultiplayer, isHost]);
 
   const finishQuiz = () => {
-    // FIX: Pad answers array if the quiz finished early (e.g. timeout, survival fail)
+    // Ensure every question has an answer entry (even if skipped/ended early)
     // This prevents ResultScreen from crashing when it tries to map over answers
-    const paddedAnswers = [...answers];
-    if (paddedAnswers.length < questions.length) {
-      for (let i = paddedAnswers.length; i < questions.length; i++) {
-        paddedAnswers.push({
-          questionId: questions[i].id,
-          selectedOption: null, // Indicates it was skipped or timed out
-          isCorrect: false
-        });
-      }
-    }
+    const paddedAnswers = questions.map(q => {
+      const existing = answers.find(a => a.questionId === q.id);
+      if (existing) return existing;
+
+      return {
+        questionId: q.id,
+        selectedIndex: -1,
+        textAnswer: undefined,
+        isCorrect: false
+      };
+    });
 
     const correctCount = paddedAnswers.filter(a => a.isCorrect).length;
     onComplete({ 
