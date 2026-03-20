@@ -298,11 +298,11 @@ export const generateQuiz = async (
   // 2. Handle File Uploads
   const fileArray = Array.isArray(files) ? files : (files ? [files] : []);
   if (fileArray.length > 0) {
-    for (const file of fileArray) {
+    const parts = await Promise.all(fileArray.map(async file => {
       onProgress(`Memproses file ${file.name}...`);
-      const part = await fileToGenerativePart(file);
-      baseParts.push(part);
-    }
+      return await fileToGenerativePart(file);
+    }));
+    baseParts.push(...parts);
     contextText += ` [Files: ${fileArray.map(f => f.name).join(', ')}]`; 
   } 
   
