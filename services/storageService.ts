@@ -8,7 +8,7 @@
 import { Question, ModelConfig, AiProvider, StorageProvider, CloudNote, LibraryItem } from "../types";
 import { summarizeMaterial } from "./geminiService";
 import { get, set, update } from 'idb-keyval'; // IndexedDB Wrapper
-import { db, auth } from "../firebase";
+import { db, auth, OperationType, handleFirestoreError } from "../firebase";
 import { 
     doc, 
     setDoc, 
@@ -25,37 +25,6 @@ import {
     orderBy,
     limit
 } from "firebase/firestore";
-
-export enum OperationType {
-    CREATE = 'create',
-    UPDATE = 'update',
-    DELETE = 'delete',
-    LIST = 'list',
-    GET = 'get',
-    WRITE = 'write',
-}
-
-function handleFirestoreError(error: any, operationType: OperationType, path: string | null) {
-    const errInfo = {
-        error: error instanceof Error ? error.message : String(error),
-        authInfo: {
-            userId: auth.currentUser?.uid,
-            email: auth.currentUser?.email,
-            emailVerified: auth.currentUser?.emailVerified,
-            isAnonymous: auth.currentUser?.isAnonymous,
-            providerInfo: auth.currentUser?.providerData.map(provider => ({
-                providerId: provider.providerId,
-                displayName: provider.displayName,
-                email: provider.email,
-                photoUrl: provider.photoURL
-            })) || []
-        },
-        operationType,
-        path
-    };
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
-    throw new Error(JSON.stringify(errInfo));
-}
 
 // Helper for Unique IDs
 export const generateId = () => {
