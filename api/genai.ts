@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Vercel Serverless Function Handler
 export default async function handler(req: any, res: any) {
@@ -32,6 +34,20 @@ export default async function handler(req: any, res: any) {
         const isGemini3 = payload.modelName === 'gemini-3-flash-preview';
         const location = isGemini3 ? 'global' : (process.env.VITE_GCP_LOCATION || 'us-central1');
         
+        // Memuat kredensial dari Service Account JSON secara dinamis
+        const env = process.env as any;
+        if (!env.GOOGLE_APPLICATION_CREDENTIALS && env.GCP_SERVICE_ACCOUNT_JSON) {
+          try {
+            const keyPath = path.join('/tmp', 'vertex-svc-acc.json');
+            if (!fs.existsSync(keyPath)) {
+              fs.writeFileSync(keyPath, env.GCP_SERVICE_ACCOUNT_JSON);
+            }
+            env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
+          } catch (e) {
+            console.error("[Backend] Gagal memuat credential file ke /tmp:", e);
+          }
+        }
+
         console.log(`[Backend] Initializing Vertex AI client in Standard Mode (${location})...`);
   
         ai = new GoogleGenAI({
