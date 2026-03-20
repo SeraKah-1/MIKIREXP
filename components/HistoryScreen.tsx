@@ -312,7 +312,9 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
   }, [quizHistory, searchQuery, activeFilter]);
 
   // Calc uncached count
-  const uncachedCount = libraryItems.filter(item => !item.processedContent || !item.processedContent.includes("[SMART CACHE")).length;
+  const uncachedCount = useMemo(() => {
+    return libraryItems.filter(item => !item.processedContent || !item.processedContent.includes("[SMART CACHE")).length;
+  }, [libraryItems]);
 
   return (
     <div className="max-w-6xl mx-auto pt-4 pb-24 px-4 min-h-[90vh] text-theme-text flex flex-col md:flex-row gap-6">
