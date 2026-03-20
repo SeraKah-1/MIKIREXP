@@ -177,28 +177,34 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
     
     let successCount = 0;
 
-    for (const file of files) {
-       try {
-         setProcessingStatus(`Mengupload ${file.name}...`);
-         let content: string | File = file;
-         let type: 'pdf' | 'text' = 'text';
-         
-         if (file.name.endsWith('.pdf')) {
-            type = 'pdf';
-         } else {
-            content = await file.text();
-         }
-         
-         // Use processAndSaveToLibrary which tries to summarize immediately
-         // If it fails, it saves raw. We can re-process later.
-         setProcessingStatus(`Analisis AI: ${file.name}...`);
-         await processAndSaveToLibrary(file.name, content, type);
-         
-         successCount++;
-         setProcessingProgress(prev => ({ ...prev, done: prev.done + 1 }));
-       } catch (err) {
-         console.error("Failed to process", file.name, err);
-       }
+    const CHUNK_SIZE = 3;
+    for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+       const chunk = files.slice(i, i + CHUNK_SIZE);
+       await Promise.all(
+         chunk.map(async (file) => {
+           try {
+             setProcessingStatus(`Mengupload ${file.name}...`);
+             let content: string | File = file;
+             let type: 'pdf' | 'text' = 'text';
+
+             if (file.name.endsWith('.pdf')) {
+                type = 'pdf';
+             } else {
+                content = await file.text();
+             }
+
+             // Use processAndSaveToLibrary which tries to summarize immediately
+             // If it fails, it saves raw. We can re-process later.
+             setProcessingStatus(`Analisis AI: ${file.name}...`);
+             await processAndSaveToLibrary(file.name, content, type);
+
+             successCount++;
+             setProcessingProgress(prev => ({ ...prev, done: prev.done + 1 }));
+           } catch (err) {
+             console.error("Failed to process", file.name, err);
+           }
+         })
+       );
     }
     
     setIsProcessingFile(false);
