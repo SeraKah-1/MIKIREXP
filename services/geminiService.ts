@@ -43,7 +43,7 @@ async function callAI(action: string, payload: any): Promise<any> {
     const ai = new GoogleGenAI({ apiKey });
     
     const response = await ai.models.generateContent({
-      model: modelName || 'gemini-3-flash-preview',
+      model: sanitizeModelName(modelName) || 'gemini-1.5-flash',
       contents: { parts },
       config: {
         systemInstruction: systemInstruction || undefined,
@@ -74,15 +74,24 @@ async function callAI(action: string, payload: any): Promise<any> {
 
 // Prioritas Model untuk Ingestion (Meringkas). 
 const INGESTION_MODELS = [
-  'gemini-3-pro-preview',     // 1. Frontier Intelligence
-  'gemini-2.5-pro',           // 2. Stable Advanced Thinking
-  'gemini-3-flash-preview',   // 3. Balanced Speed
-  'gemini-2.5-flash',         // 4. Stable Fast
-  'gemini-2.5-flash-lite'     // 5. Ultra Fast Fallback
+  'gemini-3-flash-preview',   // 1. Latest Preview
+  'gemini-1.5-pro',           // 2. High Intelligence
+  'gemini-2.0-flash',         // 3. Ultra Fast & New
+  'gemini-1.5-flash',         // 4. Stable Fast
+  'gemini-2.0-flash-lite-preview-02-05' // 5. Experimental
 ];
 
 // Model Cepat untuk "Generation" (Membuat Soal) -> High RPM
-const DEFAULT_GENERATION_MODEL = 'gemini-3-flash-preview';
+const DEFAULT_GENERATION_MODEL = 'gemini-1.5-flash';
+
+// Helper to sanitize model name for Vertex AI (fixes 404 errors)
+function sanitizeModelName(model: string): string {
+  if (model === 'gemini-3-flash-preview') return model;
+  if (model.includes('gemini-3')) return 'gemini-2.0-flash';
+  if (model.includes('gemini-2.5-flash-lite')) return 'gemini-2.0-flash-lite-preview-02-05';
+  if (model.includes('gemini-2.5')) return 'gemini-1.5-flash';
+  return model;
+}
 
 const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } } | { text: string }> => {
   // SAFETY: Limit individual file size to 20MB to prevent browser crash and API limits
@@ -239,7 +248,7 @@ const sanitizeQuestion = (q: any): Omit<Question, 'id'> => {
 export const summarizeMaterial = async (apiKey: string, content: string | File): Promise<string> => {
   if (!content) return "";
   
-  const modelName = 'gemini-3-flash-preview'; // Standard Fast Model
+  const modelName = 'gemini-1.5-flash'; // Standard Fast Model
   
   const prompt = `
     ROLE: Senior Knowledge Engineer.
@@ -364,7 +373,7 @@ export const generateQuiz = async (
   let allGeneratedQuestions: Question[] = [];
 
   // Gunakan model yang dipilih user. Jika kosong, default ke Flash.
-  const selectedModel = modelId || 'gemini-3-flash-preview';
+  const selectedModel = modelId || 'gemini-1.5-flash';
   
   // Define Schema
   const responseSchema: Schema = {
@@ -427,7 +436,7 @@ export const generateQuiz = async (
       try {
          const data = await callAI('generateQuizBatch', { 
             apiKey, 
-            modelName: selectedModel, 
+            modelName: sanitizeModelName(selectedModel), 
             parts, 
             responseSchema, 
             temperature: 0.5 
@@ -519,21 +528,13 @@ export const chatWithDocument = async (apiKey: string, modelId: string, history:
     finalParts.push(filePart);
   }
 
-  promptText += `USER MESSAGE: ${message}\n\n`;
-
-  const formattedHistory = history.map(h => {
-    return `${h.role === 'user' ? 'USER' : 'ASSISTANT'}: ${h.parts[0].text}`;
-  }).join('\n\n');
-
-  promptText += `CHAT HISTORY:\n${formattedHistory}\n\nASSISTANT:\n`;
-
-  finalParts.push({ text: promptText });
+  const contents = [...history, { role: 'user', parts: finalParts }];
 
   try {
     const data = await callAI('chat', {
        apiKey,
-       modelName: modelId || 'gemini-3-flash-preview',
-       parts: finalParts,
+       modelName: modelId || 'gemini-1.5-flash',
+       contents: contents,
        systemInstruction,
        temperature: 0.3
     });

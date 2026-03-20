@@ -75,7 +75,7 @@ export default async function handler(req: any, res: any) {
       const model = modelName === 'gemini-3-flash-preview' ? modelName : ((modelName && modelName.includes('gemini-3')) ? 'gemini-2.0-flash' : (modelName || 'gemini-1.5-flash'));
       const response = await ai.models.generateContent({
         model: model,
-        contents: { parts }
+        contents: [{ role: 'user', parts }]
       });
       result = response.text;
 
@@ -84,7 +84,7 @@ export default async function handler(req: any, res: any) {
       const model = modelName === 'gemini-3-flash-preview' ? modelName : ((modelName && modelName.includes('gemini-3')) ? 'gemini-2.0-flash' : (modelName || 'gemini-1.5-flash'));
       const response = await ai.models.generateContent({
         model: model,
-        contents: { parts },
+        contents: [{ role: 'user', parts }],
         config: {
           responseMimeType: "application/json",
           responseSchema,
@@ -94,11 +94,11 @@ export default async function handler(req: any, res: any) {
       result = response.text;
 
     } else if (action === 'chat') {
-      const { modelName, parts, systemInstruction, temperature } = payload;
+      const { modelName, contents, systemInstruction, temperature } = payload;
       const model = modelName === 'gemini-3-flash-preview' ? modelName : ((modelName && modelName.includes('gemini-3')) ? 'gemini-2.0-flash' : (modelName || 'gemini-1.5-flash'));
       const response = await ai.models.generateContent({
         model: model,
-        contents: { parts },
+        contents: contents, // Use structured contents from frontend
         config: {
           systemInstruction,
           temperature: temperature || 0.3,
