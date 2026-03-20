@@ -79,7 +79,7 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart, onContinue,
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
 
-  const hasApiKey = !!getApiKey('gemini');
+  const hasApiKey = !!getApiKey('gemini') || import.meta.env.VITE_USE_VERTEX_EXPRESS === 'true';
 
   useEffect(() => {
     getLibraryItems().then(setLibraryItems);

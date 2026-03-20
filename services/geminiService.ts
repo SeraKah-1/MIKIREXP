@@ -16,8 +16,10 @@ export function getActiveProvider(): 'gemini' {
 async function callAI(action: string, payload: any): Promise<any> {
   const { apiKey, modelName, parts, contents, systemInstruction, responseSchema, temperature, maxOutputTokens } = payload;
 
-  // PRIORITY 1: Browser SDK Direct (Jika User sudah define API key di FE)
-  if (apiKey) {
+  const isVertexExpress = import.meta.env.VITE_USE_VERTEX_EXPRESS === 'true';
+
+  // PRIORITY 1: Browser SDK Direct (Hanya jika Vertex Express TIDAK aktif dan ada API key lokal)
+  if (apiKey && !isVertexExpress) {
     console.log(`[Gemini] Routing ${action} directly to Google via Browser SDK...`);
     const ai = new GoogleGenAI({ apiKey });
     
@@ -279,8 +281,8 @@ export const generateQuiz = async (
   customPrompt: string = "",
   libraryContext: string = "" 
 ): Promise<{ questions: Question[], contextText: string }> => {
-  
-  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
+  const isVertexExpress = import.meta.env.VITE_USE_VERTEX_EXPRESS === 'true';
+  if (!apiKey && !isVertexExpress) throw new Error("API Key Gemini belum diatur.");
   
   // --- PREPARE CONTEXT ---
   const baseParts: any[] = [];
@@ -473,7 +475,8 @@ export const generateQuiz = async (
 };
 
 export const chatWithDocument = async (apiKey: string, modelId: string, history: any[], message: string, contextText: string, file: File | null) => {
-  if (!apiKey) throw new Error("API Key Gemini belum diatur.");
+  const isVertexExpress = import.meta.env.VITE_USE_VERTEX_EXPRESS === 'true';
+  if (!apiKey && !isVertexExpress) throw new Error("API Key Gemini belum diatur.");
 
   const finalParts: any[] = [];
 
