@@ -2,41 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Play, Copy, CheckCircle2, ArrowLeft, Layers, Loader2, Globe, Lock, Search, User, ShieldCheck } from 'lucide-react';
 import { getSavedQuizzes, searchCloudQuiz, createMultiplayerRoom, joinMultiplayerRoom } from '../services/storageService';
-import { db, auth } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { Question } from '../types';
 import { useGameSound } from '../hooks/useGameSound';
 
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
 
-function handleFirestoreError(error: any, operationType: OperationType, path: string | null) {
-  const errInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
 
 interface MultiplayerLobbyProps {
   onStartGame: (quizData: Question[], isHost: boolean, roomId: string, playerId?: string) => void;
