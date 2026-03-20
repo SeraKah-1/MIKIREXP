@@ -222,10 +222,20 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadHistory, onS
     setIsProcessingFile(true);
     setProcessingProgress({ done: 0, total: uncachedItems.length });
 
-    for (const item of uncachedItems) {
-        setProcessingStatus(`Memproses ${item.title}...`);
-        await reprocessLibraryItem(item);
-        setProcessingProgress(prev => ({ ...prev, done: prev.done + 1 }));
+    const CONCURRENCY_LIMIT = 3;
+
+    for (let i = 0; i < uncachedItems.length; i += CONCURRENCY_LIMIT) {
+        const chunk = uncachedItems.slice(i, i + CONCURRENCY_LIMIT);
+
+        // Update status for the chunk
+        setProcessingStatus(`Memproses ${chunk.length} item...`);
+
+        await Promise.all(
+            chunk.map(async (item) => {
+                await reprocessLibraryItem(item);
+                setProcessingProgress(prev => ({ ...prev, done: prev.done + 1 }));
+            })
+        );
     }
 
     setIsProcessingFile(false);
