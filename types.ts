@@ -164,12 +164,12 @@ export interface ModelOption {
 }
 
 export const AVAILABLE_MODELS: ModelOption[] = [
-  // --- GEMINI FLASH (Free Tier Friendly & Fast) ---
-  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash (Free Tier Friendly)", provider: 'gemini', isVision: true },
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Stable & Fast)", provider: 'gemini', isVision: true },
-  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite (Ultra Fast)", provider: 'gemini', isVision: true },
+  // --- GEMINI FLASH (Fast & Efficient) ---
+  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash (Preview)", provider: 'gemini', isVision: false },
+  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Fastest & Latest)", provider: 'gemini', isVision: true },
+  { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Balanced)", provider: 'gemini', isVision: true },
+  { id: "gemini-2.0-flash-lite-preview-02-05", label: "Gemini 2.0 Flash-Lite (Experimental)", provider: 'gemini', isVision: true },
 
-  // --- GEMINI PRO (Paid Tier / High Intelligence) ---
-  { id: "gemini-3-pro-preview", label: "Gemini 3 Pro (Paid Key Required)", provider: 'gemini', isVision: true },
-  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Advanced Reasoning)", provider: 'gemini', isVision: true },
+  // --- GEMINI PRO (High Intelligence) ---
+  { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro (Advanced Reasoning)", provider: 'gemini', isVision: true },
 ];
