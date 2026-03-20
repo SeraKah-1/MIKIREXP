@@ -42,11 +42,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ contextText, sourceFile,
     }));
 
     try {
-      if (!apiKey) throw new Error("API Key missing");
+      const isVertexExpress = import.meta.env.VITE_USE_VERTEX_EXPRESS === 'true';
+      if (!apiKey && !isVertexExpress) throw new Error("API Key missing");
       
       const response = await chatWithDocument(
         apiKey,
-        'gemini-2.5-flash', // Use Gemini for reasoning context
+        'gemini-1.5-flash', // Use Gemini for reasoning context
         apiHistory,
         userMsg,
         contextText,

@@ -276,8 +276,9 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart, onContinue,
        }
     }
 
+    const isVertexExpress = import.meta.env.VITE_USE_VERTEX_EXPRESS === 'true';
     const apiKey = getApiKey(provider);
-    if (!apiKey) {
+    if (!apiKey && !isVertexExpress) {
       alert("API Key missing");
       setIsGenerating(false);
       return;
@@ -608,7 +609,7 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart, onContinue,
                           <option key={m.id || "unknown"} value={m.id || ""}>{m.label || "Unknown Model"}</option>
                        ))
                     ) : (
-                       <option value="">{getApiKey(provider) ? 'Gagal memuat model' : 'Masukkan API Key di Settings'}</option>
+                       <option value="">{getApiKey(provider) || import.meta.env.VITE_USE_VERTEX_EXPRESS === 'true' ? 'Gagal memuat model' : 'Masukkan API Key di Settings'}</option>
                     )}
                  </select>
                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
